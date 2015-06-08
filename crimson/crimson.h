@@ -82,4 +82,6 @@ int crimson_tostr_object(JSON_OBJECT *object, FILE *stream, char **str);
 
 JSON_OBJECT *crimson_parse_object(char **str);
 
+char *crimson_get_value_str(JSON_OBJECT *obj, const char *key);
+
 #endif

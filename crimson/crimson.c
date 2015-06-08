@@ -407,7 +407,7 @@ static JSON_VALUE *crimson_parse_false(char **str)
 	if (strncmp(*str, "false", 5) == 0)
 	{
 		*str = (*str+5);
-		JSON_VALUE *val = crimson_new_value(JSON_TYPE_NULL, NULL);
+		JSON_VALUE *val = crimson_new_value(JSON_TYPE_FALSE, NULL);
 		return (val != NULL) ? val : NULL;
 	}
 
@@ -421,7 +421,7 @@ static JSON_VALUE *crimson_parse_true(char **str)
 	if (strncmp(*str, "true", 4) == 0)
 	{
 		*str = (*str+4);
-		JSON_VALUE *val = crimson_new_value(JSON_TYPE_NULL, NULL);
+		JSON_VALUE *val = crimson_new_value(JSON_TYPE_TRUE, NULL);
 		return (val != NULL) ? val : NULL;
 	}
 
@@ -610,6 +610,58 @@ JSON_OBJECT *crimson_parse_object(char **str)
 
 	return object;
 }
+
+JSON_VALUE *crimson_get_value(JSON_OBJECT *obj, const char *key)
+{
+	JSON_PAIR *pair;
+	if ((pair =crimson_get_pair(obj, key)) == NULL) return NULL;
+	return pair->value;
+}
+
+char *crimson_get_value_str(JSON_OBJECT *obj, const char *key)
+{
+	JSON_PAIR *pair;
+	char *res;
+
+	if ((pair =crimson_get_pair(obj, key)) == NULL || pair->value == NULL) res = strdup("null");
+
+	switch (pair->value->type)
+	{
+	case JSON_TYPE_NULL:
+		res = strdup("null");
+		break;
+	case JSON_TYPE_FALSE:
+		res = strdup("false");
+		break;
+	case JSON_TYPE_TRUE:
+		res = strdup("true");
+		break;
+	case JSON_TYPE_STRING:
+		res =strdup(pair->value->val);
+		break;
+	case JSON_TYPE_NUMBER_INT:
+		asprintf(&res, "%d", *((int*)pair->value->val));
+		break;
+	case JSON_TYPE_NUMBER_LONG:
+		asprintf(&res, "%ld", *((long*)pair->value->val));
+		break;
+	case JSON_TYPE_NUMBER_FLOAT:
+		asprintf(&res, "%f", *((float*)pair->value->val));
+		break;
+	case JSON_TYPE_NUMBER_DOUBLE:
+		asprintf(&res, "%f", *((double*)pair->value->val));
+		break;
+	default:
+		res = strdup("null");
+	}
+
+	return res;
+}
+
+
+
+
+
 
 
 

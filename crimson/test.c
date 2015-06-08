@@ -64,7 +64,7 @@ int main(void) {
 
 	crimson_delete_object(obj);
 
-	char* json = "        {\"Married\":true, \"Age\":24, \"Wife\":\"Sahudy\", \"Marriage_Date\":\"\\/Date(1433783698645-400)\\/\"}\n";
+	char* json = "        {\"Married\":false, \"Age\":24.8, \"Wife\":\"Sahudy\", \"Marriage_Date\":\"\\/Date(1433783698645-400)\\/\"}\n";
 
 	char* parser = json;
 
@@ -77,11 +77,16 @@ int main(void) {
 
 	char *res;
 	crimson_tostr_object(obj, NULL, &res);
-
 	puts(res);
 	free(res);
+
+	char *search = crimson_get_value_str(obj, "Age");
+	puts(search);
+	free(search);
+
 	crimson_delete_object(obj);
 
+	puts("END");
 	return EXIT_SUCCESS;
 }
 
