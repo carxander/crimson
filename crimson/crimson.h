@@ -84,4 +84,12 @@ JSON_OBJECT *crimson_parse_object(char **str);
 
 char *crimson_get_value_str(JSON_OBJECT *obj, const char *key);
 
+#define crimson_add_string(o, k, s)		crimson_add_pair((o), crimson_new_pair(k, crimson_new_value(JSON_TYPE_STRING, s)))
+
+#define crimson_append_string(o, k, s)	crimson_append_pair((o), crimson_new_pair(k, crimson_new_value(JSON_TYPE_STRING, s)))
+
+#define PARSE_AS_STRING
+
+
+
 #endif

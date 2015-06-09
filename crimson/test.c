@@ -74,6 +74,7 @@ int main(void) {
 	else printf("\nDone\n");
 
 	crimson_add_pair(obj, crimson_new_pair("Wife", crimson_new_value(JSON_TYPE_STRING, "Sharolyn")));
+	crimson_append_string(obj, "BirthDate", "24/06/1990");
 
 	char *res;
 	crimson_tostr_object(obj, NULL, &res);
