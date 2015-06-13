@@ -13,81 +13,40 @@
 
 int main(void) {
 
-	JSON_VALUE *val;
-	JSON_PAIR *pair;
-	JSON_OBJECT *obj;
-	JSON_ARRAY *array;
+	char *json = "{\"Name\":\"Carlos\",\"Age\":24,       \n\t     \"Married\":true, \"Phones\":[\"809-599-1111\",\"809-599-2222\",\"809-599-3333\"]}";
+	char *json2 = "{\"Name\":\"Richard\",\"Age\":21,       \n\t     \"Married\":false}";
 
-	val = crimson_new_value(JSON_TYPE_STRING, "Carlos");
-	pair = crimson_new_pair("Name", val);
-	obj = crimson_new_object(pair);
+	char *parser = json;
+	JSON_OBJECT *obj = crimson_parse_object(&parser);
 
-	val = crimson_new_value(JSON_TYPE_STRING, "Alvarez");
-	pair = crimson_new_pair("Last_Name", val);
+	if (obj == NULL)
+	{
+		puts("Error near:");
+		puts(parser);
+		return 0;
+	}
 
-	crimson_add_pair(obj, pair);
+	parser = json2;
+	JSON_OBJECT *obj2 = crimson_parse_object(&parser);
+	if (obj == NULL)
+	{
+		puts("Error near:");
+		puts(parser);
+		return 0;
+	}
 
-	array = crimson_new_array(NULL);
-	val = crimson_new_value(JSON_TYPE_STRING, "809-555-5555");
-	crimson_append_value(array, val);
-	val = crimson_new_value(JSON_TYPE_STRING, "809-333-3333");
-	crimson_append_value(array, val);
-	val = crimson_new_value(JSON_TYPE_STRING, "809-777-7777");
-	crimson_append_value(array, val);
-	val = crimson_new_value(JSON_TYPE_ARRAY, array);
-	pair = crimson_new_pair("Phones", val);
+	crimson_add_pair(obj, crimson_new_pair("Name", crimson_new_value(JSON_TYPE_STRING, "Alexander")));
 
-	crimson_add_pair(obj, pair);
-
-	val = crimson_new_value(JSON_TYPE_STRING, "Something avenue #1632, Bronx, NY, USA.");
-	pair = crimson_new_pair("Address", val);
-
-	crimson_add_pair(obj, pair);
-
-	val = crimson_new_value(JSON_TYPE_TRUE, NULL);
-	pair = crimson_new_pair("Married", val);
-
-	crimson_add_pair(obj, pair);
-
-	val = crimson_new_value(JSON_TYPE_NULL, NULL);
-	pair = crimson_new_pair("Social_Security", val);
-
-	crimson_add_pair(obj, pair);
-
-	char *str = NULL;
-
+	char *str;
 	crimson_tostr_object(obj, NULL, &str);
-
-	printf("%s", str);
+	puts(str);
 	free(str);
-	str = NULL;
 
 	crimson_delete_object(obj);
+	crimson_delete_object(obj2);
 
-	char* json = "        {\"Married\":false, \"Age\":24.8, \"Wife\":\"Sahudy\", \"Marriage_Date\":\"\\/Date(1433783698645-400)\\/\"}\n";
 
-	char* parser = json;
 
-	obj = crimson_parse_object(&parser);
-
-	if (obj == NULL) {printf("\nError near:\n\t\t"); puts(parser); return 0;}
-	else printf("\nDone\n");
-
-	crimson_add_pair(obj, crimson_new_pair("Wife", crimson_new_value(JSON_TYPE_STRING, "Sharolyn")));
-	crimson_append_string(obj, "BirthDate", "24/06/1990");
-
-	char *res;
-	crimson_tostr_object(obj, NULL, &res);
-	puts(res);
-	free(res);
-
-	char *search = crimson_get_value_str(obj, "Age");
-	puts(search);
-	free(search);
-
-	crimson_delete_object(obj);
-
-	puts("END");
 	return EXIT_SUCCESS;
 }
 

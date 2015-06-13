@@ -20,47 +20,38 @@
 /* Private methods */
 static JSON_ARRAY *crimson_parse_array(char **str);
 
-
-
 JSON_VALUE *crimson_new_value(JSON_VALUE_TYPE vtype, void *value)
 {
 	JSON_VALUE *new_value;
 	new_value = calloc(1, sizeof(JSON_VALUE));
+	if (value == NULL) vtype = JSON_TYPE_NULL;
+	new_value->type = vtype;
 
 	switch (vtype)
 	{
 	case JSON_TYPE_NULL:
-	case JSON_TYPE_FALSE:
-	case JSON_TYPE_TRUE:
-		new_value->val = NULL;
+		new_value->val = strdup("null");
 		break;
-	case JSON_TYPE_STRING:
+	case JSON_TYPE_BOOLEAN:
+		if (strcmp("true", value) != 0 && strcmp("false", value) != 0)
+		{
+			free(new_value);
+			return NULL;
+		}
 		new_value->val = strdup((char *) value);
 		break;
-	case JSON_TYPE_NUMBER_INT:
-		new_value->val = calloc(1, sizeof(int));
-		memcpy(new_value->val, value, sizeof(int));
-		break;
-	case JSON_TYPE_NUMBER_LONG:
-		new_value->val = calloc(1, sizeof(long));
-		memcpy(new_value->val, value, sizeof(long));
-		break;
-	case JSON_TYPE_NUMBER_FLOAT:
-		new_value->val = calloc(1, sizeof(float));
-		memcpy(new_value->val, value, sizeof(float));
-		break;
-	case JSON_TYPE_NUMBER_DOUBLE:
-		new_value->val = calloc(1, sizeof(double));
-		memcpy(new_value->val, value, sizeof(double));
+	case JSON_TYPE_STRING:
+	case JSON_TYPE_NUMBER:
+		new_value->val = strdup((char *) value);
 		break;
 	case JSON_TYPE_OBJECT:
 	case JSON_TYPE_ARRAY:
 		new_value->val = value;
 		break;
 	default:
-		new_value->val = value;
+		free(new_value);
+		return NULL;
 	}
-	new_value->type = vtype;
 
 	return new_value;
 }
@@ -129,11 +120,10 @@ int crimson_add_pair(JSON_OBJECT *object, JSON_PAIR *pair)
 		if (strcmp(pr->key, pair->key) == 0)
 		{
 			pair->next = pr->next;
+			crimson_delete_pair(pr);
 
 			if (bf == NULL) object->first_pair = pair;
 			else bf->next = pair;
-
-			crimson_delete_pair(pr);
 			return 1;
 		}
 
@@ -182,16 +172,11 @@ void crimson_delete_value(JSON_VALUE *value)
 	if (value == NULL) return;
 
 	switch (value->type) {
-		case JSON_TYPE_NULL:
-		case JSON_TYPE_FALSE:
-		case JSON_TYPE_TRUE:
-			break;
+	case JSON_TYPE_NULL:
+	case JSON_TYPE_BOOLEAN:
 	case JSON_TYPE_STRING:
-	case JSON_TYPE_NUMBER_INT:
-	case JSON_TYPE_NUMBER_LONG:
-	case JSON_TYPE_NUMBER_FLOAT:
-	case JSON_TYPE_NUMBER_DOUBLE:
-		if (value->val != NULL) free(value->val);
+	case JSON_TYPE_NUMBER:
+		if (value->val != NULL) {free(value->val); value->val = NULL;}
 		break;
 	case JSON_TYPE_OBJECT:
 		crimson_delete_object(value->val);
@@ -261,6 +246,34 @@ JSON_PAIR *crimson_get_pair(JSON_OBJECT *obj, const char *key)
 	return NULL;
 }
 
+JSON_VALUE *crimson_get_value(JSON_OBJECT *obj, const char *key)
+{
+	JSON_PAIR *pair;
+	if ((pair =crimson_get_pair(obj, key)) == NULL) return NULL;
+	return pair->value;
+}
+
+char *crimson_get_value_str(JSON_OBJECT *obj, const char *key)
+{
+	JSON_PAIR *pair;
+	char *res;
+
+	if ((pair =crimson_get_pair(obj, key)) == NULL || pair->value == NULL) return NULL;
+
+	switch (pair->value->type)
+	{
+	case JSON_TYPE_NULL:
+	case JSON_TYPE_BOOLEAN:
+	case JSON_TYPE_STRING:
+	case JSON_TYPE_NUMBER:
+		return (char *) pair->value->val;
+	default:
+		return NULL;
+	}
+
+	return res;
+}
+
 int crimson_tostr_value(JSON_VALUE *value, FILE *stream, char **str)
 {
 	if (value == NULL || str == NULL) return -1;
@@ -274,33 +287,14 @@ int crimson_tostr_value(JSON_VALUE *value, FILE *stream, char **str)
 	switch (value->type)
 	{
 	case JSON_TYPE_NULL:
-		fprintf(strm, "null");
-		break;
-	case JSON_TYPE_FALSE:
-		fprintf(strm, "false");
-		break;
-	case JSON_TYPE_TRUE:
-		fprintf(strm, "true");
+	case JSON_TYPE_BOOLEAN:
+	case JSON_TYPE_NUMBER:
+		if (value->val == NULL) fprintf(strm, "null");
+		fprintf(strm, "%s", (char *) value->val);
 		break;
 	case JSON_TYPE_STRING:
 		if (value->val == NULL) fprintf(strm, "null");
-		fprintf(strm, "\"%s\"", (char*)value->val);
-		break;
-	case JSON_TYPE_NUMBER_INT:
-		if (value->val == NULL) fprintf(strm, "null");
-		fprintf(strm, "%d", *((int*)value->val));
-		break;
-	case JSON_TYPE_NUMBER_LONG:
-		if (value->val == NULL) fprintf(strm, "null");
-		fprintf(strm, "%ld", *((long*)value->val));
-		break;
-	case JSON_TYPE_NUMBER_FLOAT:
-		if (value->val == NULL) fprintf(strm, "null");
-		fprintf(strm, "%f", *((float*)value->val));
-		break;
-	case JSON_TYPE_NUMBER_DOUBLE:
-		if (value->val == NULL) fprintf(strm, "null");
-		fprintf(strm, "%f", *((double*)value->val));
+		fprintf(strm, "\"%s\"", (char *) value->val);
 		break;
 	case JSON_TYPE_OBJECT:
 		if (value->val == NULL) fprintf(strm, "null");
@@ -400,32 +394,24 @@ static JSON_VALUE *crimson_parse_null(char **str)
 	return NULL;
 }
 
-static JSON_VALUE *crimson_parse_false(char **str)
+static JSON_VALUE *crimson_parse_boolean(char **str)
 {
 	if (str == NULL || *str == NULL) return NULL;
 
-	if (strncmp(*str, "false", 5) == 0)
-	{
-		*str = (*str+5);
-		JSON_VALUE *val = crimson_new_value(JSON_TYPE_FALSE, NULL);
-		return (val != NULL) ? val : NULL;
-	}
-
-	return NULL;
-}
-
-static JSON_VALUE *crimson_parse_true(char **str)
-{
-	if (str == NULL || *str == NULL) return NULL;
+	JSON_VALUE *val;
 
 	if (strncmp(*str, "true", 4) == 0)
 	{
-		*str = (*str+4);
-		JSON_VALUE *val = crimson_new_value(JSON_TYPE_TRUE, NULL);
-		return (val != NULL) ? val : NULL;
+		val = crimson_new_value(JSON_TYPE_BOOLEAN, "true");
+		if (val != NULL) *str = (*str+4);
+	}
+	else if (strncmp(*str, "false", 5) == 0)
+	{
+		val = crimson_new_value(JSON_TYPE_BOOLEAN, "false");
+		if (val != NULL) *str = (*str+5);
 	}
 
-	return NULL;
+	return val;
 }
 
 static JSON_VALUE *crimson_parse_string(char **str)
@@ -458,25 +444,17 @@ static JSON_VALUE *crimson_parse_number(char **str)
 	if (str == NULL || *str == NULL) return NULL;
 
 	char *tail;
-	long l_val;
-
 	JSON_VALUE *val;
 
-	l_val = strtol(*str, &tail, 0);
-	if (tail == *str) return NULL;
-	if(*tail != '.')
-	{
-		val = crimson_new_value(JSON_TYPE_NUMBER_LONG, &l_val);
-		*str = tail;
-		return val;
-	}
-
-	double d_val;
-	d_val = strtod(*str, &tail);
+	strtod(*str, &tail);
 	if (tail == *str) return NULL;
 
-	val = crimson_new_value(JSON_TYPE_NUMBER_DOUBLE, &d_val);
+	char *s;
+	s = strndup(*str, (tail-*str));
+	val = crimson_new_value(JSON_TYPE_NUMBER, s);
+	free(s);
 	*str = tail;
+
 	return val;
 }
 
@@ -488,8 +466,7 @@ static JSON_VALUE *crimson_parse_value(char **str)
 	if (**str == '\0') return NULL;
 
 		 if (**str == 'n') return crimson_parse_null(str);
-	else if (**str == 'f') return crimson_parse_false(str);
-	else if (**str == 't') return crimson_parse_true(str);
+	else if (**str == 'f' || **str == 't') return crimson_parse_boolean(str);
 	else if (**str == '"') return crimson_parse_string(str);
 	else if (isdigit(**str) || **str == '-' || **str == '+') return crimson_parse_number(str);
 	else if (**str == '{')
@@ -505,7 +482,7 @@ static JSON_VALUE *crimson_parse_value(char **str)
 		JSON_ARRAY *array = crimson_parse_array(str);
 		if (array == NULL) return NULL;
 
-		JSON_VALUE *val = crimson_new_value(JSON_TYPE_OBJECT, array);
+		JSON_VALUE *val = crimson_new_value(JSON_TYPE_ARRAY, array);
 		return val;
 	}
 
@@ -565,7 +542,6 @@ static JSON_ARRAY *crimson_parse_array(char **str)
 	if (**str != '[') return NULL;
 	(*str)++;
 
-
 	JSON_ARRAY *array = crimson_new_array(NULL);
 
 	_skip_spaces((*str));
@@ -574,11 +550,24 @@ static JSON_ARRAY *crimson_parse_array(char **str)
 		JSON_VALUE *val = crimson_parse_value(str);
 		if (val != NULL && crimson_append_value(array, val) == 0) {}
 		else {crimson_delete_array(array); return NULL;}
-		_skip_spaces((*str));
-		if (**str != ',' && **str != ']') {crimson_delete_array(array); return NULL;}
+
+
+
+
+		if (**str == ',')
+		{
+			(*str)++;
+			_skip_spaces((*str));
+			if (**str == ']') {crimson_delete_array(array); return NULL;}
+			continue;
+		}
+		if (**str == ']') break;
+
+		return NULL;
 	}
-	if (**str != '\0') (*str)++;
-	else {crimson_delete_array(array); return NULL;}
+
+	if (**str != ']') {crimson_delete_array(array); return NULL;}
+	(*str)++;
 
 	return array;
 }
@@ -601,7 +590,13 @@ JSON_OBJECT *crimson_parse_object(char **str)
 		else {crimson_delete_object(object); return NULL;}
 		_skip_spaces((*str));
 
-		if (**str == ',') {(*str)++;  continue;}
+		if (**str == ',')
+		{
+			(*str)++;
+			_skip_spaces((*str));
+			if (**str == '}') {crimson_delete_object(object); return NULL;}
+			continue;
+		}
 		if (**str == '}') break;
 
 		return NULL;
@@ -611,52 +606,7 @@ JSON_OBJECT *crimson_parse_object(char **str)
 	return object;
 }
 
-JSON_VALUE *crimson_get_value(JSON_OBJECT *obj, const char *key)
-{
-	JSON_PAIR *pair;
-	if ((pair =crimson_get_pair(obj, key)) == NULL) return NULL;
-	return pair->value;
-}
 
-char *crimson_get_value_str(JSON_OBJECT *obj, const char *key)
-{
-	JSON_PAIR *pair;
-	char *res;
-
-	if ((pair =crimson_get_pair(obj, key)) == NULL || pair->value == NULL) res = strdup("null");
-
-	switch (pair->value->type)
-	{
-	case JSON_TYPE_NULL:
-		res = strdup("null");
-		break;
-	case JSON_TYPE_FALSE:
-		res = strdup("false");
-		break;
-	case JSON_TYPE_TRUE:
-		res = strdup("true");
-		break;
-	case JSON_TYPE_STRING:
-		res =strdup(pair->value->val);
-		break;
-	case JSON_TYPE_NUMBER_INT:
-		asprintf(&res, "%d", *((int*)pair->value->val));
-		break;
-	case JSON_TYPE_NUMBER_LONG:
-		asprintf(&res, "%ld", *((long*)pair->value->val));
-		break;
-	case JSON_TYPE_NUMBER_FLOAT:
-		asprintf(&res, "%f", *((float*)pair->value->val));
-		break;
-	case JSON_TYPE_NUMBER_DOUBLE:
-		asprintf(&res, "%f", *((double*)pair->value->val));
-		break;
-	default:
-		res = strdup("null");
-	}
-
-	return res;
-}
 
 
 

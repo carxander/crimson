@@ -12,14 +12,10 @@
 
 typedef enum
 {
-	JSON_TYPE_NULL = -1,
-	JSON_TYPE_FALSE,
-	JSON_TYPE_TRUE,
+	JSON_TYPE_NULL = 0,
+	JSON_TYPE_BOOLEAN,
 	JSON_TYPE_STRING,
-	JSON_TYPE_NUMBER_INT,
-	JSON_TYPE_NUMBER_LONG,
-	JSON_TYPE_NUMBER_FLOAT,
-	JSON_TYPE_NUMBER_DOUBLE,
+	JSON_TYPE_NUMBER,
 	JSON_TYPE_OBJECT,
 	JSON_TYPE_ARRAY
 } JSON_VALUE_TYPE;
@@ -88,8 +84,7 @@ char *crimson_get_value_str(JSON_OBJECT *obj, const char *key);
 
 #define crimson_append_string(o, k, s)	crimson_append_pair((o), crimson_new_pair(k, crimson_new_value(JSON_TYPE_STRING, s)))
 
-#define PARSE_AS_STRING
-
+JSON_VALUE *crimson_get_value(JSON_OBJECT *obj, const char *key);
 
 
 #endif
