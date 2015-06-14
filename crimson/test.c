@@ -8,43 +8,43 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "crimson.h"
 
 int main(void) {
 
-	char *json = "{\"Name\":\"Carlos\",\"Age\":24,       \n\t     \"Married\":true, \"Phones\":[\"809-599-1111\",\"809-599-2222\",\"809-599-3333\"]}";
-	char *json2 = "{\"Name\":\"Richard\",\"Age\":21,       \n\t     \"Married\":false}";
+	FILE *tst;
+	tst = fopen("JSON", "r");
+	char json[40000];
+	memset(json, 0, 40000);
+	fgets(json, 40000, tst);
+	fclose(tst);
+	//puts(json);
 
-	char *parser = json;
-	JSON_OBJECT *obj = crimson_parse_object(&parser);
-
-	if (obj == NULL)
+	float start = clock();
+	int i;
+	for (i=0; i < 10000; i++)
 	{
-		puts("Error near:");
-		puts(parser);
-		return 0;
+		char *parser = json;
+		JSON_OBJECT *obj = crimson_parse_object(&parser);
+
+		/*if (obj == NULL)
+		{
+			printf("Error in char #%d, near:\n%s\n          ^", (int)(parser-json), parser-10);
+			return 0;
+		}*/
+
+		char *tostr;
+		crimson_tostr_object(obj, NULL, &tostr);
+		//puts(tostr);
+		free(tostr);
+		crimson_delete_object(obj);
 	}
+	float end = clock();
 
-	parser = json2;
-	JSON_OBJECT *obj2 = crimson_parse_object(&parser);
-	if (obj == NULL)
-	{
-		puts("Error near:");
-		puts(parser);
-		return 0;
-	}
 
-	crimson_add_pair(obj, crimson_new_pair("Name", crimson_new_value(JSON_TYPE_STRING, "Alexander")));
-
-	char *str;
-	crimson_tostr_object(obj, NULL, &str);
-	puts(str);
-	free(str);
-
-	crimson_delete_object(obj);
-	crimson_delete_object(obj2);
-
+	printf("Time: %.2f s\n", (float)((end - start)/1000000));
 
 
 	return EXIT_SUCCESS;

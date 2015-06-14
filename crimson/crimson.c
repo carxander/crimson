@@ -15,7 +15,7 @@
 
 #include "crimson.h"
 
-#define _skip_spaces(x)		while(isspace(*x) && *x != '\0') x++
+#define _skip_spaces(x)		while(isspace(*(x))) (x)++
 
 /* Private methods */
 static JSON_ARRAY *crimson_parse_array(char **str);
@@ -387,8 +387,7 @@ static JSON_VALUE *crimson_parse_null(char **str)
 	if (strncmp(*str, "null", 4) == 0)
 	{
 		*str = (*str+4);
-		JSON_VALUE *val = crimson_new_value(JSON_TYPE_NULL, NULL);
-		return (val != NULL) ? val : NULL;
+		return crimson_new_value(JSON_TYPE_NULL, NULL);
 	}
 
 	return NULL;
@@ -416,22 +415,20 @@ static JSON_VALUE *crimson_parse_boolean(char **str)
 
 static JSON_VALUE *crimson_parse_string(char **str)
 {
-	if (str == NULL || *str == NULL) return NULL;
+	if (str == NULL || *str == NULL || **str != '"') return NULL;
 
-	if (**str != '"') return NULL;
 	char *start = ++(*str);
 
-	int i;
-	for (i = 1; **str != '\0'; i++)
+	//int i;
+	while (**str != '"' && **str != '\0')
 	{
-		if (**str == '"') break;
-		else if (iscntrl(**str)) return NULL;
+		if (iscntrl(**str)) return NULL;
 		(*str)++;
 	}
 	if (**str == '\0') return NULL;
 
 	(*str)++;
-	char *s = strndup(start, i-1);
+	char *s = strndup(start, (*str - start - 1));
 	if (s == NULL) return NULL;
 	JSON_VALUE *val = crimson_new_value(JSON_TYPE_STRING, s);
 	free(s);
@@ -462,7 +459,7 @@ static JSON_VALUE *crimson_parse_value(char **str)
 {
 	if (str == NULL || *str == NULL) return NULL;
 
-	_skip_spaces((*str));
+	_skip_spaces(*str);
 	if (**str == '\0') return NULL;
 
 		 if (**str == 'n') return crimson_parse_null(str);
@@ -493,24 +490,26 @@ static JSON_PAIR *crimson_parse_pair(char **str)
 {
 	if (str == NULL || *str == NULL) return NULL;
 
-	_skip_spaces((*str));
+	_skip_spaces(*str);
 	if (**str != '"') return NULL;
-	(*str)++;
+	//(*str)++;
 
-	int len = 0;
-	char *endk = *str;
+	char *endk = ++(*str);
 	while (*endk != '"')
 	{
-		if (*endk == '\\' || *endk == '\0') {*str = endk; return NULL;}
-		len++;
+		if (*endk == '\\' || *endk == '\0')
+		{
+			*str = endk;
+			return NULL;
+		}
 		endk++;
 	}
 
-	char *key = strndup(*str, len);
+	char *key = strndup(*str, (endk - *str));
 	*str = endk;
 	(*str)++;
 
-	_skip_spaces((*str));
+	_skip_spaces(*str);
 
 	if (**str != ':')
 	{
@@ -537,27 +536,26 @@ static JSON_ARRAY *crimson_parse_array(char **str)
 {
 	if (str == NULL || *str == NULL) return NULL;
 
-	_skip_spaces((*str));
+	_skip_spaces(*str);
 
 	if (**str != '[') return NULL;
 	(*str)++;
 
 	JSON_ARRAY *array = crimson_new_array(NULL);
 
-	_skip_spaces((*str));
+	_skip_spaces(*str);
+
+	JSON_VALUE **h_val = &array->first_value;
 	while (**str != ']' && **str != '\0')
 	{
 		JSON_VALUE *val = crimson_parse_value(str);
-		if (val != NULL && crimson_append_value(array, val) == 0) {}
+		if (val != NULL) {*h_val = val; h_val = &val->next;}
 		else {crimson_delete_array(array); return NULL;}
-
-
-
 
 		if (**str == ',')
 		{
 			(*str)++;
-			_skip_spaces((*str));
+			_skip_spaces(*str);
 			if (**str == ']') {crimson_delete_array(array); return NULL;}
 			continue;
 		}
@@ -567,8 +565,8 @@ static JSON_ARRAY *crimson_parse_array(char **str)
 	}
 
 	if (**str != ']') {crimson_delete_array(array); return NULL;}
-	(*str)++;
 
+	(*str)++;
 	return array;
 }
 
@@ -576,24 +574,25 @@ JSON_OBJECT *crimson_parse_object(char **str)
 {
 	if (str == NULL || *str == NULL) return NULL;
 
-	_skip_spaces((*str));
+	_skip_spaces(*str);
 
 	if (**str != '{') return NULL;
 	(*str)++;
 
 	JSON_OBJECT *object = crimson_new_object(NULL);
 
+	JSON_PAIR **h_pair = &object->first_pair;
 	while (**str != '}' && **str != '\0')
 	{
 		JSON_PAIR *pair = crimson_parse_pair(str);
-		if (pair != NULL && crimson_add_pair(object, pair) == 0) {}
+		if (pair != NULL) {*h_pair = pair; h_pair = &pair->next;}
 		else {crimson_delete_object(object); return NULL;}
-		_skip_spaces((*str));
+		_skip_spaces(*str);
 
 		if (**str == ',')
 		{
 			(*str)++;
-			_skip_spaces((*str));
+			_skip_spaces(*str);
 			if (**str == '}') {crimson_delete_object(object); return NULL;}
 			continue;
 		}
@@ -603,6 +602,7 @@ JSON_OBJECT *crimson_parse_object(char **str)
 	}
 	if (**str != '}') {crimson_delete_object(object); return NULL;}
 
+	(*str)++;
 	return object;
 }
 
