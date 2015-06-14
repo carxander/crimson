@@ -398,7 +398,7 @@ static JSON_VALUE *crimson_parse_boolean(char **str)
 {
 	if (str == NULL || *str == NULL) return NULL;
 
-	JSON_VALUE *val;
+	JSON_VALUE *val = NULL;
 
 	if (strncmp(*str, "true", 4) == 0)
 	{
