@@ -420,12 +420,16 @@ static JSON_VALUE *crimson_parse_string(char **str)
 	char *start = ++(*str);
 
 	//int i;
-	while (**str != '"' && **str != '\0')
+
+	*str = strpbrk(*str, "\"\\\b\f\n\r\t\0");
+	if (**str != '"') return NULL;
+
+	/*while (**str != '"' && **str != '\0')
 	{
 		if (iscntrl(**str)) return NULL;
 		(*str)++;
 	}
-	if (**str == '\0') return NULL;
+	if (**str == '\0') return NULL;*/
 
 	(*str)++;
 	char *s = strndup(start, (*str - start - 1));
@@ -492,9 +496,13 @@ static JSON_PAIR *crimson_parse_pair(char **str)
 
 	_skip_spaces(*str);
 	if (**str != '"') return NULL;
-	//(*str)++;
 
-	char *endk = ++(*str);
+	(*str)++;
+	char *endk = strpbrk(*str, "\"\\\0");
+
+	if (*endk != '"') {*str = endk; return NULL;}
+
+	/*char *endk = ++(*str);
 	while (*endk != '"')
 	{
 		if (*endk == '\\' || *endk == '\0')
@@ -503,7 +511,7 @@ static JSON_PAIR *crimson_parse_pair(char **str)
 			return NULL;
 		}
 		endk++;
-	}
+	}*/
 
 	char *key = strndup(*str, (endk - *str));
 	*str = endk;
