@@ -20,32 +20,38 @@ int main(void) {
 	memset(json, 0, 40000);
 	fgets(json, 40000, tst);
 	fclose(tst);
-	//puts(json);
 
-	float start = clock();
-	int i;
-	for (i=0; i < 10000; i++)
+	char *parser = json;
+	JSON_OBJECT *obj = crimson_parse_object(&parser);
+
+	if (obj == NULL)
 	{
-		char *parser = json;
-		JSON_OBJECT *obj = crimson_parse_object(&parser);
-
-		/*if (obj == NULL)
-		{
-			printf("Error in char #%d, near:\n%s\n          ^", (int)(parser-json), parser-10);
-			return 0;
-		}*/
-
-		char *tostr;
-		crimson_tostr_object(obj, NULL, &tostr);
-		//puts(tostr);
-		free(tostr);
-		crimson_delete_object(obj);
+		printf("Error in char #%d, near:\n%s\n          ^", (int)(parser-json), parser-10);
+		return 0;
 	}
-	float end = clock();
 
+	//crimson_edit_value(obj, "ENTITYS", JSON_TYPE_STRING, "Cero cero");
 
-	printf("Time: %.2f s\n", (float)((end - start)/1000000));
+	JSON_OBJECT *obj2;
+	obj2 = crimson_new_object(NULL);
+	crimson_add_string(obj2, "RSP_CODE2", "TT");
+	crimson_add_string(obj2, "ENTITYS", "TEST2");
 
+	if (crimson_validate_object(obj2, obj) == 0)
+	{
+		puts("Json valido\n");
+	}
+	else
+	{
+		puts("Json invalido\n");
+	}
+	crimson_delete_object(obj2);
+
+	char *tostr;
+	crimson_tostr_object(obj, NULL, &tostr);
+	puts(tostr);
+	free(tostr);
+	crimson_delete_object(obj);
 
 	return EXIT_SUCCESS;
 }

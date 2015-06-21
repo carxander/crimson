@@ -78,13 +78,16 @@ int crimson_tostr_object(JSON_OBJECT *object, FILE *stream, char **str);
 
 JSON_OBJECT *crimson_parse_object(char **str);
 
+JSON_VALUE *crimson_get_value(JSON_OBJECT *obj, const char *key);
+
 char *crimson_get_value_str(JSON_OBJECT *obj, const char *key);
+
+int crimson_edit_value(JSON_OBJECT *obj, const char *key, JSON_VALUE_TYPE type, void *nval);
 
 #define crimson_add_string(o, k, s)		crimson_add_pair((o), crimson_new_pair(k, crimson_new_value(JSON_TYPE_STRING, s)))
 
 #define crimson_append_string(o, k, s)	crimson_append_pair((o), crimson_new_pair(k, crimson_new_value(JSON_TYPE_STRING, s)))
 
-JSON_VALUE *crimson_get_value(JSON_OBJECT *obj, const char *key);
-
+int crimson_validate_object(JSON_OBJECT *j_orig, JSON_OBJECT *j_model);
 
 #endif

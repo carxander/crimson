@@ -274,6 +274,22 @@ char *crimson_get_value_str(JSON_OBJECT *obj, const char *key)
 	return res;
 }
 
+int crimson_edit_value(JSON_OBJECT *obj, const char *key, JSON_VALUE_TYPE type, void *nval)
+{
+	if (obj == NULL || key == NULL) return -1;
+
+	JSON_PAIR *pair;
+	if ((pair = crimson_get_pair(obj, key)) == NULL) return -1;
+
+	JSON_VALUE *new_value;
+	if ((new_value = crimson_new_value(type, nval)) == NULL) return -1;
+
+	if (pair->value != NULL) crimson_delete_value(pair->value);
+	pair->value = new_value;
+
+	return 0;
+}
+
 int crimson_tostr_value(JSON_VALUE *value, FILE *stream, char **str)
 {
 	if (value == NULL || str == NULL) return -1;
@@ -557,7 +573,11 @@ static JSON_ARRAY *crimson_parse_array(char **str)
 	while (**str != ']' && **str != '\0')
 	{
 		JSON_VALUE *val = crimson_parse_value(str);
-		if (val != NULL) {*h_val = val; h_val = &val->next;}
+		if (val != NULL)
+		{
+			*h_val = val;
+			h_val = (JSON_VALUE **) &val->next;
+		}
 		else {crimson_delete_array(array); return NULL;}
 
 		if (**str == ',')
@@ -593,7 +613,11 @@ JSON_OBJECT *crimson_parse_object(char **str)
 	while (**str != '}' && **str != '\0')
 	{
 		JSON_PAIR *pair = crimson_parse_pair(str);
-		if (pair != NULL) {*h_pair = pair; h_pair = &pair->next;}
+		if (pair != NULL)
+		{
+			*h_pair = pair;
+			h_pair = (JSON_PAIR **) &pair->next;
+		}
 		else {crimson_delete_object(object); return NULL;}
 		_skip_spaces(*str);
 
@@ -614,7 +638,21 @@ JSON_OBJECT *crimson_parse_object(char **str)
 	return object;
 }
 
+int crimson_validate_object(JSON_OBJECT *j_orig, JSON_OBJECT *j_model)
+{
+	if (j_orig == NULL || j_model == NULL) return -1;
 
+	JSON_PAIR *pair;
+	pair = j_orig->first_pair;
+
+	while (pair != NULL)
+	{
+		if (crimson_get_pair(j_model, pair->key) == NULL) return -1;
+		pair = pair->next;
+	}
+
+	return 0;
+}
 
 
 
